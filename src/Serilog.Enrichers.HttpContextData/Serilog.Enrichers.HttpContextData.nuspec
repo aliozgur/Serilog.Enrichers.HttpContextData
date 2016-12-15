@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Serilog.Enrichers.HttpContextData</id>
+    <version>0.1</version>
+    <title>Serilog.Enrichers.HttpContextData</title>
+    <authors>Ali Özgür</authors>
+    <owners>Ali Özgür</owners>
+    <licenseUrl>https://github.com/aliozgur/Serilog.Enrichers.HttpContextData/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/aliozgur/Serilog.Enrichers.HttpContextData</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Enriches Serilog events with information from HttpContext.Current</description>
+    <releaseNotes>Initial release</releaseNotes>
+    <tags>Serilog Serilog.Enrichers Serilog.Enrichers.HttpContextData HttpContext Enrichers</tags>
+     <dependencies>
+       <dependency id="Serilog" version="1.0.1" />
+     </dependencies>
+  </metadata>
+</package>
