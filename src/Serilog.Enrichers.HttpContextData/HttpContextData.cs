@@ -7,14 +7,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Web;
 using System.Collections.Specialized;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
-using Serilog;
-using Serilog.Configuration;
-using Serilog.Enrichers;
-using Serilog.Events;
 
 namespace Serilog.Enrichers.HttpContextData
 {

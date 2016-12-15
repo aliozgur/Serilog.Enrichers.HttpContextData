@@ -1,10 +1,7 @@
 ﻿// Includes code inspired from Nick Craver's StackExchange.Exceptional 
 // See https://github.com/NickCraver/StackExchange.Exceptional
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 
 namespace Serilog.Enrichers.HttpContextData
 {
