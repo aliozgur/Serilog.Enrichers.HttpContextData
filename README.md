@@ -17,7 +17,7 @@ Log.Logger = new LoggerConfiguration()
 
 You will have enriched log events that look like the screenshot below (Serilog log event sinked to Seq)
 
-[[https://raw.githubusercontent.com/aliozgur/Serilog.Enrichers.HttpContextData/master/assets/ss.png|alt=Serilog.Enrichers.HttpContextData on Seq]]
+![Serilog.Enrichers.HttpContextData on Seq](https://raw.githubusercontent.com/aliozgur/Serilog.Enrichers.HttpContextData/master/assets/ss.png)
 
 
 ## Dependencies
