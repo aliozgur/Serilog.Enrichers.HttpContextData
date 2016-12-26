@@ -54,4 +54,9 @@ public class HttpContextDataLogFilter
     /// <remarks>If value is empty string the key will be totally removed</remarks>
     public string ReplaceWith { get; set; }
 
+    /// <summary>
+    /// Specify if the value in Name property is a regex
+    /// </summary>
+    public bool NameIsRegex { get; set; } = false;
+
 }

@@ -19,9 +19,16 @@ namespace Serilog.Enrichers.HttpContextData
         internal const string CollectionErrorKey = "CollectionFetchError";
 
         private ConcurrentDictionary<string, string> _formLogFilters = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, string> _formRegexLogFilters = new ConcurrentDictionary<string, string>();
+
         private ConcurrentDictionary<string, string> _cookieLogFilters = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, string> _cookieRegexLogFilters = new ConcurrentDictionary<string, string>();
+
         private ConcurrentDictionary<string, string> _headerLogFilters = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, string> _headerRegexLogFilters = new ConcurrentDictionary<string, string>();
+
         private ConcurrentDictionary<string, string> _serverVarLogFilters = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, string> _serverVarRegexLogFilters = new ConcurrentDictionary<string, string>();
         private Regex _dataIncludeRegex;
 
 
@@ -36,39 +43,66 @@ namespace Serilog.Enrichers.HttpContextData
             }
         }
 
-        public HttpContextData(HttpContextBase context) : this(null, context,null)
+        public HttpContextData(HttpContextBase context) : this(null, context, null)
         {
         }
 
-        public HttpContextData(Exception e):this(e,null,null)
+        public HttpContextData(Exception e) : this(e, null, null)
         {
         }
 
-        public HttpContextData(Exception e, HttpContextBase context, HttpContextDataLogFilterSettings filterSettings )
+        public HttpContextData(Exception e, HttpContextBase context, HttpContextDataLogFilterSettings filterSettings)
         {
             MachineName = Environment.MachineName;
             FilterSettings = filterSettings;
 
-            if (e != null) SetExceptionProperties(e,(FilterSettings?.AppendFullStackTrace) ?? false);
+            if (e != null) SetExceptionProperties(e, (FilterSettings?.AppendFullStackTrace) ?? false);
             if (context != null) SetContextProperties(context);
         }
-      
+
 
         private void PrepareLogFilters()
         {
             _dataIncludeRegex = null;
 
             _cookieLogFilters = new ConcurrentDictionary<string, string>();
-            _filterSettings?.CookieFilters?.ForEach(flf => _cookieLogFilters[flf.Name] = flf.ReplaceWith ?? "");
+            _cookieRegexLogFilters = new ConcurrentDictionary<string, string>();
+            _filterSettings?.CookieFilters?.ToList().ForEach(flf =>
+                {
+                    if (!flf.NameIsRegex) _cookieLogFilters[flf.Name] = flf.ReplaceWith ?? "";
+                    else if (!String.IsNullOrWhiteSpace(flf.Name)) _cookieRegexLogFilters[flf.Name] = flf.ReplaceWith ?? "";
+                }
+            );
+
 
             _formLogFilters = new ConcurrentDictionary<string, string>();
-            _filterSettings?.FormFilters?.ForEach(flf => _formLogFilters[flf.Name] = flf.ReplaceWith ?? "");
+            _formRegexLogFilters = new ConcurrentDictionary<string, string>();
+            _filterSettings?.FormFilters?.ToList().ForEach(flf =>
+            {
+                if (!flf.NameIsRegex) _formLogFilters[flf.Name] = flf.ReplaceWith ?? "";
+                else if (!String.IsNullOrWhiteSpace(flf.Name)) _formRegexLogFilters[flf.Name] = flf.ReplaceWith ?? "";
+            }
+            );
+
 
             _headerLogFilters = new ConcurrentDictionary<string, string>();
-            _filterSettings?.HeaderFilters?.ForEach(flf => _headerLogFilters[flf.Name] = flf.ReplaceWith ?? "");
+            _headerRegexLogFilters = new ConcurrentDictionary<string, string>();
+            _filterSettings?.HeaderFilters?.ToList().ForEach(flf =>
+            {
+                if (!flf.NameIsRegex) _headerLogFilters[flf.Name] = flf.ReplaceWith ?? "";
+                else if (!String.IsNullOrWhiteSpace(flf.Name)) _headerRegexLogFilters[flf.Name] = flf.ReplaceWith ?? "";
+            }
+            );
+
 
             _serverVarLogFilters = new ConcurrentDictionary<string, string>();
-            _filterSettings?.ServerVarFilters?.ForEach(flf => _serverVarLogFilters[flf.Name] = flf.ReplaceWith ?? "");
+            _serverVarRegexLogFilters = new ConcurrentDictionary<string, string>();
+            _filterSettings?.ServerVarFilters?.ToList().ForEach(flf =>
+            {
+                if (!flf.NameIsRegex) _serverVarLogFilters[flf.Name] = flf.ReplaceWith ?? "";
+                else if (!String.IsNullOrWhiteSpace(flf.Name)) _serverVarRegexLogFilters[flf.Name] = flf.ReplaceWith ?? "";
+            }
+            );
 
             if (!string.IsNullOrEmpty(_filterSettings?.DataIncludePattern))
             {
@@ -111,7 +145,7 @@ namespace Serilog.Enrichers.HttpContextData
                 AddFromData(exCursor);
                 exCursor = exCursor.InnerException;
             }
-            
+
 
         }
 
@@ -137,70 +171,22 @@ namespace Serilog.Enrichers.HttpContextData
             StatusCode = context.Response?.StatusCode;
             _httpMethod = context.Request.HttpMethod;
 
-            ServerVariables = _serverVarLogFilters?.ContainsKey("") == true 
-                ? new NameValueCollection() 
+            ServerVariables = _serverVarLogFilters?.ContainsKey("") == true
+                ? new NameValueCollection()
                 : tryGetCollection(r => r.ServerVariables);
 
             QueryString = tryGetCollection(r => r.QueryString);
-            Form = _formLogFilters?.ContainsKey("") == true ? new NameValueCollection() 
+            Form = _formLogFilters?.ContainsKey("") == true ? new NameValueCollection()
                 : tryGetCollection(r => r.Form);
 
-            // Filter server variables for sensitive information
-            if (_serverVarLogFilters?.Count > 0)
-            {
-                foreach (var k in _serverVarLogFilters.Keys)
-                {
-                    if (ServerVariables[k] != null)
-                    {
-                        var replaceWith = _serverVarLogFilters[k];
-                        if (replaceWith == "") ServerVariables.Remove(k); // Discard form value
-                        else ServerVariables[k] = replaceWith;
-                    }
+            FilterServerVariables();
+            FilterFormData();
+            FilterCookies(request);
+            FilterRequestHeaderData(request);
+        }
 
-                }
-            }
-
-            // Filter form variables for sensitive information
-            if (_formLogFilters?.Count > 0)
-            {
-                    foreach (var k in _formLogFilters.Keys)
-                    {
-                        if (Form[k] != null)
-                        {
-                            var replaceWith = _formLogFilters[k];
-                            if (replaceWith == "") Form.Remove(k); // Discard form value
-                            else Form[k] = replaceWith;
-                        }
-
-                    }
-            }
-
-            try
-            {
-                if (_cookieLogFilters?.ContainsKey("") == true)
-                {
-                    Cookies = new NameValueCollection();
-                }
-                else
-                {
-                    Cookies = new NameValueCollection(request.Cookies.Count);
-
-                    for (var i = 0; i < request.Cookies.Count; i++)
-                    {
-                        var name = request.Cookies[i].Name;
-                        string val;
-                        _cookieLogFilters.TryGetValue(name, out val);
-                        if (val == "") Cookies.Remove(name); // Discard cookie value
-                        else Cookies.Add(name, val ?? request.Cookies[i].Value);
-                    }
-                }
-            }
-            catch (HttpRequestValidationException e)
-            {
-                Trace.WriteLine("Error parsing cookie collection: " + e.Message);
-            }
-
-
+        private void FilterRequestHeaderData(HttpRequestBase request)
+        {
             if (_headerLogFilters?.ContainsKey("") == true)
             {
                 RequestHeaders = new NameValueCollection();
@@ -214,13 +200,127 @@ namespace Serilog.Enrichers.HttpContextData
                     if (string.Compare(header, "Cookie", StringComparison.OrdinalIgnoreCase) == 0)
                         continue;
 
-
                     if (request.Headers[header] != null)
                     {
-                        string val;
-                        _headerLogFilters.TryGetValue(header, out val);
+                        string val = null;
+                        if (!(_headerLogFilters?.TryGetValue(header, out val) ?? false)) // No match by name
+                        {
+                            var regexMatch = _headerRegexLogFilters.Where(r => Regex.IsMatch(header, r.Key, RegexOptions.IgnoreCase | RegexOptions.Singleline))
+                                .Select(r => new { Key = r.Key, Value = r.Value })
+                                .FirstOrDefault();
+
+                            val = regexMatch?.Value;
+                        }
+
                         if (val == "") continue; // Discard header value
                         else RequestHeaders[header] = val ?? request.Headers[header];
+                    }
+                }
+            }
+        }
+
+        private void FilterCookies(HttpRequestBase request)
+        {
+            try
+            {
+                if (_cookieLogFilters?.ContainsKey("") == true)
+                {
+                    Cookies = new NameValueCollection();
+                }
+                else
+                {
+                    Cookies = new NameValueCollection(request.Cookies.Count);
+
+                    for (var i = 0; i < request.Cookies.Count; i++)
+                    {
+                        var name = request.Cookies[i].Name;
+                        string val=null;
+                        if(!(_cookieLogFilters?.TryGetValue(name, out val)??false)) // No match by name
+                        {
+                            var regexMatch = _cookieRegexLogFilters.Where(r => Regex.IsMatch(name, r.Key, RegexOptions.IgnoreCase | RegexOptions.Singleline))
+                                .Select(r => new { Key = r.Key, Value = r.Value})
+                                .FirstOrDefault();
+
+                            val = regexMatch?.Value;
+                        }
+
+                        if (val == "" ) Cookies.Remove(name); // Discard cookie value
+                        else Cookies.Add(name, val ?? request.Cookies[i].Value);
+                    }
+                }
+            }
+            catch (HttpRequestValidationException e)
+            {
+                Trace.WriteLine("Error parsing cookie collection: " + e.Message);
+            }
+        }
+
+        private void FilterFormData()
+        {
+            // Filter form variables
+            if (_formLogFilters?.Count > 0 && Form?.Count > 0)
+            {
+                foreach (var k in _formLogFilters.Keys)
+                {
+                    if (Form[k] != null)
+                    {
+                        var replaceWith = _formLogFilters[k];
+                        if (replaceWith == "") Form.Remove(k); // Discard form value
+                        else Form[k] = replaceWith;
+                    }
+                }
+            }
+
+            if (_formRegexLogFilters?.Count > 0 && Form?.Count > 0)
+            {
+                foreach (var key in _formRegexLogFilters.Keys)
+                {
+                    var matchKeys =
+                        Form?.AllKeys?.Where(k => Regex.IsMatch(k, key, RegexOptions.IgnoreCase | RegexOptions.Singleline));
+                    foreach (var k in matchKeys)
+                    {
+                        if (Form[k] != null)
+                        {
+                            var replaceWith = _formRegexLogFilters[key];
+                            if (replaceWith == "") Form.Remove(k); // Discard form value
+                            else Form[k] = replaceWith;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void FilterServerVariables()
+        {
+            // Filter server variables 
+            if (_serverVarLogFilters?.Count > 0 && ServerVariables?.Count > 0)
+            {
+                foreach (var k in _serverVarLogFilters.Keys)
+                {
+                    if (ServerVariables[k] != null)
+                    {
+                        var replaceWith = _serverVarLogFilters[k];
+                        if (replaceWith == "") ServerVariables.Remove(k); // Discard form value
+                        else ServerVariables[k] = replaceWith;
+                    }
+                }
+            }
+
+            if (_serverVarRegexLogFilters?.Count > 0 && ServerVariables?.Count > 0)
+            {
+                foreach (var key in _serverVarRegexLogFilters.Keys)
+                {
+                    var matchKeys =
+                        ServerVariables?.AllKeys?.Where(
+                            k => Regex.IsMatch(k, key, RegexOptions.IgnoreCase | RegexOptions.Singleline));
+                    foreach (var k in matchKeys)
+                    {
+                        if (ServerVariables[k] != null)
+                        {
+                            var replaceWith = _serverVarRegexLogFilters[key];
+                            if (replaceWith == "") ServerVariables.Remove(k); // Discard form value
+                            else ServerVariables[k] = replaceWith;
+                        }
                     }
                 }
             }
@@ -253,7 +353,7 @@ namespace Serilog.Enrichers.HttpContextData
         public string ExceptionDetail { get; set; }
 
         public string MachineName { get; set; }
-       
+
         public int? StatusCode { get; set; }
 
         [ScriptIgnore]
@@ -289,7 +389,7 @@ namespace Serilog.Enrichers.HttpContextData
         public string IPAddress { get { return _ipAddress ?? (_ipAddress = ServerVariables == null ? "" : ServerVariables.GetRemoteIP()); } set { _ipAddress = value; } }
         private string _ipAddress;
 
-       
+
         public List<NameValuePair> ServerVariablesSerializable
         {
             get { return GetPairs(ServerVariables); }
@@ -317,7 +417,7 @@ namespace Serilog.Enrichers.HttpContextData
             set { RequestHeaders = GetNameValueCollection(value); }
         }
 
-       
+
 
         public string ToJson()
         {

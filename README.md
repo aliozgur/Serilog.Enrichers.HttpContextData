@@ -75,7 +75,7 @@ settings.DataIncludePattern = @"\b([0-9]{1,3}\.){3}[0-9]{1,3}$"
 ## Filter Name and ReplaceWith conventions
 While capturing context data two conventions are followed to discard a single value with a specified name or set of values.
 
-1. If you have a **HttpContextDataLogFilter** instance with **empty string** (be warned not null)  **Name** inside a **HttpContextDataLogFilterSettings** filter all items will be discarded and not captured.
+If you have a **HttpContextDataLogFilter** instance with **empty string** (be warned not null)  **Name** inside a **HttpContextDataLogFilterSettings** filter all items will be discarded and not captured.
 
 ```csharp
 HttpContextDataLogFilterSettings settings = new HttpContextDataLogFilterSettings();
@@ -89,7 +89,7 @@ settings.HeaderFilters = new List<HttpContextDataLogFilter>
                     };
 
 ```
-2. If you have a **HttpContextDataLogFilter** instance with **empty string** (be warned not null)  **Value** inside a **HttpContextDataLogFilterSettings** filter that specific item matching the **Name** value will be discarded
+If you have a **HttpContextDataLogFilter** instance with **empty string** (be warned not null)  **Value** inside a **HttpContextDataLogFilterSettings** filter that specific item matching the **Name** value will be discarded
 
 ```csharp
 HttpContextDataLogFilterSettings settings = new HttpContextDataLogFilterSettings();
@@ -102,6 +102,23 @@ settings.HeaderFilters = new List<HttpContextDataLogFilter>
                     };
 
 ```
+
+**NEW With version 0.1.1** You can also specify a regular expression in the ```Name``` property of  an ```HttpContextDataLogFilter``` instance, in this case you will need to set the ```NameIsRegex``` property to true.
+
+_Please note regex filters also follow the **the empty string** convention described above._
+
+```csharp
+var logFilterSettings = new HttpContextDataLogFilterSettings
+        {
+            ServerVarFilters = new List<HttpContextDataLogFilter>
+            {
+                new HttpContextDataLogFilter {Name = "AUTH_U.*", ReplaceWith = "", NameIsRegex = true }, // will remove all server variables matched by the regex specified in the Name property.
+                new HttpContextDataLogFilter {Name = "AUTH_PASSWORD", ReplaceWith = "***"},
+            }
+        };
+```
+
+
 ## Initializing the Enricher with settings
 
 ```csharp
