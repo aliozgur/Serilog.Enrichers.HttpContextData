@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Serilog.Enrichers.HttpContextData</id>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
     <title>Serilog.Enrichers.HttpContextData</title>
     <authors>ali.ozgur</authors>
     <owners>ali.ozgur</owners>
@@ -10,7 +10,7 @@
     <projectUrl>https://github.com/aliozgur/Serilog.Enrichers.HttpContextData</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Enriches Serilog events with information from HttpContext.Current</description>
-    <releaseNotes>Implement regular expression context data filtering</releaseNotes>
+    <releaseNotes>Add switch to turn on/off exception details</releaseNotes>
     <tags>Serilog Serilog.Enrichers Serilog.Enrichers.HttpContextData HttpContext Enrichers</tags>
      <dependencies>
        <dependency id="Serilog" version="1.0.1" />

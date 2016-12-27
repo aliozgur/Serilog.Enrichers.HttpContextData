@@ -7,10 +7,10 @@ namespace Serilog.Enrichers.HttpContextData
 {
     public class HttpContextDataEnricher : ILogEventEnricher
     {
-        private ConcurrentDictionary<string, LogEventProperty> _cachedProperties =
-            new ConcurrentDictionary<string, LogEventProperty>();
 
         public LogEventLevel MinimumLogLevel { get; set; } = LogEventLevel.Error;
+        public bool IncludeExceptionInfo { get; set; } = false;
+
         public HttpContextDataLogFilterSettings FilterSettings { get; set; }
 
         public HttpContextDataEnricher()
@@ -46,7 +46,7 @@ namespace Serilog.Enrichers.HttpContextData
             var currentCtx = new HttpContextWrapper(HttpContext.Current);
             var e = logEvent.Exception;
             var ctx = new HttpContextData(e, currentCtx, FilterSettings);
-            if (e != null)
+            if (e != null && IncludeExceptionInfo)
             {
                 propertyFactory.CreateProperty("_" + nameof(ctx.ExceptionMessage), ctx.ExceptionMessage).AddIfAbsent(logEvent);
                 propertyFactory.CreateProperty("_" + nameof(ctx.ExceptionDetail), ctx.ExceptionDetail).AddIfAbsent(logEvent);
