@@ -22,7 +22,7 @@ You will have enriched log events that look like the screenshot below (Serilog l
 
 ## Dependencies
 * **Serilog** version 1.0.1 or above 
-* **System.Web** and **System.Wen.Extensions** friends
+* **System.Web** and **System.Web.Extensions** friends
 
 
 ## Log Filter And Settings
@@ -138,7 +138,7 @@ settings.HeaderFilters = new List<HttpContextDataLogFilter>
 //...
 
 //Create the enricher 
-var contextEnricher = new HttpContextDataEnricher(settings,LogEventLevel.Error);
+var contextEnricher = new HttpContextDataEnricher(LogEventLevel.Error, settings);
 Log.Logger = new LoggerConfiguration()
     .Enrich.With(contextEnricher) // <<--- This is how we configure our enricher
     // ...other configuration...
