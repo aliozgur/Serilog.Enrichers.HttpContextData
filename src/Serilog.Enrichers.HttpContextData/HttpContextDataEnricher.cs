@@ -81,6 +81,12 @@ namespace Serilog.Enrichers.HttpContextData
                 propertyFactory.CreateProperty("rh: " + v.Name, v.Value).AddIfAbsent(logEvent);
             }
 
+            sv = ctx.FormSerializable;
+            foreach (var v in sv)
+            {
+                propertyFactory.CreateProperty("fm: " + v.Name, v.Value).AddIfAbsent(logEvent);
+            }
+
             sv = ctx.QueryStringSerializable;
             foreach (var v in sv)
             {
