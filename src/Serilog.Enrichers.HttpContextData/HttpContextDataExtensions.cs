@@ -75,7 +75,7 @@ namespace Serilog.Enrichers.HttpContextData
         }
 
         /// <summary>
-        /// Enrich log events with a MachineName property containing the current <see cref="Environment.MachineName"/>.
+        /// Enrich log events with HTTP context data.
         /// </summary>
         /// <param name="enrichmentConfiguration">Logger enrichment configuration.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
@@ -84,6 +84,21 @@ namespace Serilog.Enrichers.HttpContextData
         {
             if (enrichmentConfiguration == null) throw new ArgumentNullException(nameof(enrichmentConfiguration));
             return enrichmentConfiguration.With<HttpContextDataEnricher>();
+        }
+
+        /// <summary>
+        /// Enrich log events with HTTP context data.
+        /// </summary>
+        /// <param name="enrichmentConfiguration">Logger enrichment configuration</param>
+        /// <param name="minimumLogLevel">The minimum log level from which to enrich the log events</param>
+        /// <returns>Configuration object allowing method chaining</returns>
+        public static LoggerConfiguration WithHttpContextData(
+            this LoggerEnrichmentConfiguration enrichmentConfiguration,
+            LogEventLevel minimumLogLevel)
+        {
+            if (enrichmentConfiguration == null) throw new ArgumentNullException(nameof(enrichmentConfiguration));
+
+            return enrichmentConfiguration.With(new HttpContextDataEnricher(minimumLogLevel));
         }
 
         public static void AddIfAbsent(this LogEventProperty prop, LogEvent logEvent)
